@@ -1,0 +1,10 @@
+[package]
+name = "chat-stream"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.89"
+async-google-gemini = { path = "../../" }
+futures = "0.3.30"
+tokio = { version = "1.40.0", features = ["full"] }
