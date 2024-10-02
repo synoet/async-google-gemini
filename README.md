@@ -1,14 +1,15 @@
 # async-google-gemini
 
 async rust library for interacting with google's gemini API
-heavily inspired by [async-openai](https://github.com/64bit/async-openai)
+
+*heavily inspired by [async-openai](https://github.com/64bit/async-openai)*
 
 ### Usage
 
 ```bash
 export GEMINI_PROJECT_ID=your-project-id
 export GEMINI_LOCATION=your-location
-export GEMINI_API_KEY=your-api-key # can be obtained gcloud auth print access_token
+export GEMINI_API_KEY=your-api-key # can be obtained with gcloud auth print access_token
 ```
 
 ```rust
