@@ -39,7 +39,6 @@ pub struct Content {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SystemInstruction {
-    pub role: String,
     pub parts: Vec<Part>,
 }
 
@@ -63,6 +62,45 @@ struct Setting {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SafetySetting(Vec<Setting>);
+
+#[derive(Debug, Serialize, Deserialize, Clone, Builder, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[builder(setter(into, strip_option))]
+pub struct GeminiChatRequest {
+    pub contents: Vec<Content>,
+    pub model: GeminiModel,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_instruction: Option<SystemInstruction>,
+
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_content: Option<String>,
+
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<Vec<Tool>>,
+
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub safety_settings: Option<SafetySetting>,
+
+    /// Generation configuration for the model.
+    /// Will default to
+    /// ```json
+    ///     {
+    ///         "temperature": 1.0,
+    ///         "max_output_tokens": 1024,
+    ///         "top_p": 0.95,
+    ///     }
+    /// ```
+    #[builder(default)]
+    pub generation_config: Option<GenerationConfig>,
+
+    #[builder(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub labels: Option<HashMap<String, String>>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone, Builder, PartialEq)]
 #[builder(setter(into, strip_option))]
@@ -110,33 +148,6 @@ pub struct GenerationConfig {
     #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_timestamp: Option<bool>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Builder, PartialEq)]
-#[serde(rename_all = "camelCase")]
-#[builder(setter(into, strip_option))]
-pub struct GeminiChatRequest {
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cached_content: Option<String>,
-    pub contents: Vec<Content>,
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub system_instruction: Option<SystemInstruction>,
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tools: Option<Vec<Tool>>,
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub safety_settings: Option<SafetySetting>,
-    #[builder(default)]
-    pub generation_config: Option<GenerationConfig>,
-    #[builder(default)]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub labels: Option<HashMap<String, String>>,
-    #[builder(default)]
-    #[serde(skip_serializing)]
-    pub model: Option<GeminiModel>,
 }
 
 impl Default for GenerationConfig {

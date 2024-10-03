@@ -1,5 +1,6 @@
 use crate::error::ClientError;
 
+#[derive(Debug)]
 pub struct GeminiConfig {
     pub location: String,
     pub api_key: String,

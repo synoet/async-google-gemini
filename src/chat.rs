@@ -3,9 +3,7 @@ use std::pin::Pin;
 use crate::{
     client::GeminiClient,
     error::GeminiError,
-    types::{
-        chat_request::GeminiChatRequest, chat_response::GeminiChatResponse, model::GeminiModel,
-    },
+    types::{chat_request::GeminiChatRequest, chat_response::GeminiChatResponse},
 };
 use futures::{stream::StreamExt, Stream};
 use tokio::sync::mpsc;
@@ -29,16 +27,11 @@ impl<'c> Chat<'c> {
         &self,
         request: GeminiChatRequest,
     ) -> Pin<Box<dyn Stream<Item = Result<GeminiChatResponse, GeminiError>> + Send + 'static>> {
-        let model = request
-            .model
-            .as_ref()
-            .unwrap_or(&GeminiModel::Gemini15Pro002);
-
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:streamGenerateContent",
             self.client.config.location,
             self.client.config.project_id,
             self.client.config.location,
-            model.to_string(),
+            request.model.to_string(),
         );
 
         let client = self.client.http_client.clone();
