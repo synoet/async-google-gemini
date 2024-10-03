@@ -8,7 +8,12 @@ anyhow = "1.0.89"
 chrono = "0.4.38"
 derive_builder = "0.20.1"
 futures = "0.3.30"
-reqwest = { version = "0.12.8", features = ["json", "stream", "multipart", "hickory-dns"] }
+reqwest = { version = "0.12.7", features = [
+  "json",
+  "stream",
+  "multipart",
+  "hickory-dns",
+] }
 reqwest-eventsource = "0.6.0"
 reqwest-streams = "0.8.0"
 serde = { version = "1.0.210", features = ["derive"] }
