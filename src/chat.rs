@@ -28,7 +28,7 @@ impl<'c> Chat<'c> {
     pub async fn create_stream(
         &self,
         request: GeminiChatRequest,
-    ) -> Pin<Box<dyn Stream<Item = Result<GeminiChatResponse, GeminiError>> + 'static>> {
+    ) -> Pin<Box<dyn Stream<Item = Result<GeminiChatResponse, GeminiError>> + Send + 'static>> {
         let model = request
             .model
             .as_ref()
