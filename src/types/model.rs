@@ -2,7 +2,15 @@ use serde::{Deserialize, Serialize};
 use strum_macros::IntoStaticStr;
 
 #[derive(
-    Serialize, Deserialize, Debug, Clone, PartialEq, Eq, strum_macros::Display, IntoStaticStr,
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    strum_macros::Display,
+    IntoStaticStr,
+    strum_macros::EnumString,
 )]
 pub enum GeminiModel {
     #[strum(serialize = "gemini-1.5-flash-001")]
