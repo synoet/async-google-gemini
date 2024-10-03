@@ -7,6 +7,13 @@ pub struct GeminiConfig {
 }
 
 impl GeminiConfig {
+    pub fn new(location: String, api_key: String, project_id: String) -> Self {
+        Self {
+            location,
+            api_key,
+            project_id,
+        }
+    }
     pub fn try_from_env() -> Result<Self, ClientError> {
         Ok(Self {
             location: std::env::var("GEMINI_LOCATION").unwrap_or("us-central1".to_string()),

@@ -18,7 +18,7 @@ async fn main() -> Result<()> {
         .contents(vec![Content {
             role: "user".to_string(),
             parts: vec![Part {
-                data: PartData::Text("Hello, how are you?".to_string()),
+                data: PartData::Text("Write me a poem about crabs".to_string()),
                 video_metadata: None,
             }],
         }])

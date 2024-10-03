@@ -14,6 +14,13 @@ impl GeminiClient {
         })
     }
 
+    pub fn with_config(config: GeminiConfig) -> Self {
+        Self {
+            http_client: reqwest::Client::new(),
+            config,
+        }
+    }
+
     pub fn chat(&self) -> Chat {
         Chat::new(self)
     }
