@@ -4,6 +4,15 @@ async rust library for interacting with google's gemini API
 
 *heavily inspired by [async-openai](https://github.com/64bit/async-openai)*
 
+### Features
+
+- [x] Generating Content With Streaming [(example)](examples/chat-stream)
+- [x] Generating Content Without Streaming [(example)](examples/chat)
+- [ ] Multi-Modal Generation With Streaming
+- [ ] Multi-Modal Generation Without Streaming
+- [ ] Function calling
+- [ ] Count tokens
+
 ### Usage
 
 ```bash

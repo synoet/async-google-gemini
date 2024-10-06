@@ -23,6 +23,45 @@ impl<'c> Chat<'c> {
         Self { client }
     }
 
+    /// Creates a chat response
+    pub async fn create(
+        &self,
+        request: GeminiChatRequest,
+    ) -> Result<GeminiChatResponse, GeminiError> {
+        let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:generateContent",
+            self.client.config.location,
+            self.client.config.project_id,
+            self.client.config.location,
+            request.model.to_string(),
+        );
+
+        let client = self.client.http_client.clone();
+
+        let res = match client
+            .post(&url)
+            .header("content-type", "application/json; charset=utf-8")
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.client.config.api_key),
+            )
+            .json(&request)
+            .send()
+            .await
+        {
+            Ok(res) => res,
+
+            Err(e) => {
+                return Err(GeminiError::RequestError(e));
+            }
+        };
+
+        let json = res.json::<GeminiChatResponse>().await?;
+
+        Ok(json)
+    }
+
+    /// Create a chat stream response
+    /// partial message deltas will be sent as stream chunks
     pub async fn create_stream(
         &self,
         request: GeminiChatRequest,

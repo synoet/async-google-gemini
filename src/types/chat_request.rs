@@ -70,6 +70,7 @@ pub struct GeminiChatRequest {
     pub contents: Vec<Content>,
     pub model: GeminiModel,
 
+    #[builder(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub system_instruction: Option<SystemInstruction>,
 
