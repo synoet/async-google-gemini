@@ -10,6 +10,7 @@ async rust library for interacting with google's gemini API
 - [x] Generating Content Without Streaming [(example)](examples/chat)
 - [ ] Multi-Modal Generation With Streaming
 - [ ] Multi-Modal Generation Without Streaming
+- [ ] Support Service Accounts
 - [ ] Function calling
 - [ ] Count tokens
 
