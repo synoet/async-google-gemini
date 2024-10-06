@@ -51,7 +51,7 @@ impl<'c> Chat<'c> {
             Ok(res) => res,
 
             Err(e) => {
-                return Err(GeminiError::RequestError(e));
+                return Err(e.into());
             }
         };
 
@@ -90,7 +90,7 @@ impl<'c> Chat<'c> {
                 Ok(res) => res,
 
                 Err(e) => {
-                    if let Err(_) = wx.send(Err(GeminiError::RequestError(e))) {
+                    if let Err(_) = wx.send(Err(e.into())) {
                         return;
                     }
                     return;
