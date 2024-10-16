@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct GeminiChatResponse {
-    pub candidates: Vec<Candidate>,
+    pub candidates: Option<Vec<Candidate>>,
     pub usage_metadata: Option<UsageMetadata>,
     pub model_version: Option<String>,
 }
