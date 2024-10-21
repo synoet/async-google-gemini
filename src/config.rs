@@ -32,12 +32,12 @@ impl GeminiConfig {
     pub fn try_from_env_vars() -> Result<Self, ClientError> {
         Ok(Self {
             config_source: ConfigSource::Environment {
-                token: std::env::var("GEMINI_TOKEN")
-                    .map_err(|_| ClientError::MissingEnvVar("GEMINI_API_KEY".to_string()))?,
+                token: std::env::var("GCP_TOKEN")
+                    .map_err(|_| ClientError::MissingEnvVar("GCP_TOKEN".to_string()))?,
             },
-            location: std::env::var("GEMINI_LOCATION").unwrap_or("us-central1".to_string()),
-            project_id: std::env::var("GEMINI_PROJECT_ID")
-                .map_err(|_| ClientError::MissingEnvVar("GEMINI_PROJECT_ID".to_string()))?,
+            location: std::env::var("GCP_LOCATION").unwrap_or("us-central1".to_string()),
+            project_id: std::env::var("GCP_PROJECT_ID")
+                .map_err(|_| ClientError::MissingEnvVar("GCP_PROJECT_ID".to_string()))?,
         })
     }
 
@@ -58,14 +58,14 @@ impl GeminiConfig {
             config_source: ConfigSource::ServiceAccount {
                 account: Arc::new(account),
             },
-            location: std::env::var("GEMINI_LOCATION").unwrap_or("us-central1".to_string()),
+            location: std::env::var("GCP_LOCATION").unwrap_or("us-central1".to_string()),
             project_id,
         })
     }
 
     /// Attemps to load the [GeminiConfig] from a service account json in a ["GOOGLE_SERVICE_ACCOUNT"] environment variable.
     pub fn try_from_service_account_env() -> Result<Self> {
-        let content = std::env::var("GOOGLE_SERVICE_ACCOUNT")?;
+        let content = std::env::var("GCP_SERVICE_ACCOUNT")?;
         let account = CustomServiceAccount::from_json(content.as_str())?;
 
         let project_id = match account.project_id() {
@@ -77,7 +77,7 @@ impl GeminiConfig {
             config_source: ConfigSource::ServiceAccount {
                 account: Arc::new(account),
             },
-            location: std::env::var("GEMINI_LOCATION").unwrap_or("us-central1".to_string()),
+            location: std::env::var("GCP_LOCATION").unwrap_or("us-central1".to_string()),
             project_id,
         })
     }

@@ -112,6 +112,7 @@ impl<'c> Gemini<'c> {
 
             let mut stream = res.bytes_stream();
             while let Some(chunk) = stream.next().await {
+                println!("chunk: {:?}", chunk);
                 let chunk = match String::from_utf8(chunk.unwrap().to_vec()) {
                     Ok(c) => c,
                     Err(e) => {
