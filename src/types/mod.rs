@@ -1,3 +1,4 @@
-pub mod chat_request;
-pub mod chat_response;
-pub mod model;
+pub mod content;
+pub mod gemini;
+pub mod schema;
+pub mod tools;

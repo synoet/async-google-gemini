@@ -1,27 +1,19 @@
-use crate::{chat::Chat, config::GeminiConfig, error::ClientError};
+use crate::{config::GeminiConfig, error::ClientError, gemini::Gemini};
 
-pub struct GeminiClient {
+pub struct Client {
     pub http_client: reqwest::Client,
     pub config: GeminiConfig,
 }
 
-impl GeminiClient {
-    pub fn new() -> Result<Self, ClientError> {
-        let config = GeminiConfig::try_from_env()?;
+impl Client {
+    pub fn new(config: GeminiConfig) -> Result<Self, ClientError> {
         Ok(Self {
             http_client: reqwest::Client::new(),
             config,
         })
     }
 
-    pub fn with_config(config: GeminiConfig) -> Self {
-        Self {
-            http_client: reqwest::Client::new(),
-            config,
-        }
-    }
-
-    pub fn chat(&self) -> Chat {
-        Chat::new(self)
+    pub fn gemini(&self) -> Gemini {
+        Gemini::new(self)
     }
 }

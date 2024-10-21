@@ -1,32 +1,31 @@
 use anyhow::Result;
 use async_google_gemini::{
-    client::GeminiClient,
+    client::Client,
+    config::GeminiConfig,
     types::{
-        chat_request::{
-            Content, GeminiChatRequest, GenerationConfig, Part, PartData, SafetySetting,
-        },
-        model::GeminiModel,
+        content::{Content, GenerateContentRequest, Part, TextPart},
+        gemini::GeminiModel,
     },
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = GeminiClient::new()?;
+    let config = GeminiConfig::try_from_service_account_env()?;
+    let client = Client::new(config)?;
 
-    let request = GeminiChatRequest::builder()
+    let req = GenerateContentRequest::builder()
         .contents(vec![Content {
             role: "user".to_string(),
-            parts: vec![Part {
-                data: PartData::Text("Write me a poem about crabs".to_string()),
-                video_metadata: None,
-            }],
+            parts: vec![Part::TextPart(TextPart {
+                text: "Write me a poem about crabs".to_string(),
+            })],
         }])
-        .model(GeminiModel::Gemini15Pro002)
-        .safety_settings(SafetySetting::default())
-        .generation_config(GenerationConfig::default())
         .build()?;
 
-    let response = client.chat().create(request).await?;
+    let response = client
+        .gemini()
+        .generate_content(GeminiModel::Gemini15Flash002, req)
+        .await?;
 
     dbg!(response);
     Ok(())

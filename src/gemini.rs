@@ -1,14 +1,16 @@
 use std::pin::Pin;
 
-use crate::{
-    client::GeminiClient,
-    error::GeminiError,
-    types::{chat_request::GeminiChatRequest, chat_response::GeminiChatResponse},
-};
+use crate::{client::Client, error::GeminiError};
 use futures::{stream::StreamExt, Stream};
 use tokio::sync::mpsc;
-pub struct Chat<'c> {
-    client: &'c GeminiClient,
+
+use crate::types::{
+    content::{GenerateContentRequest, GenerateContentResponse},
+    gemini::GeminiModel,
+};
+
+pub struct Gemini<'c> {
+    client: &'c Client,
 }
 
 #[derive(PartialEq)]
@@ -18,32 +20,32 @@ enum ChunkType {
     End,
 }
 
-impl<'c> Chat<'c> {
-    pub fn new(client: &'c GeminiClient) -> Self {
+impl<'c> Gemini<'c> {
+    pub fn new(client: &'c Client) -> Self {
         Self { client }
     }
 
     /// Creates a chat response
-    pub async fn create(
+    pub async fn generate_content(
         &self,
-        request: GeminiChatRequest,
-    ) -> Result<GeminiChatResponse, GeminiError> {
+        model: GeminiModel,
+        request: GenerateContentRequest,
+    ) -> Result<GenerateContentResponse, GeminiError> {
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:generateContent",
-            self.client.config.location,
-            self.client.config.project_id,
-            self.client.config.location,
-            request.model.to_string(),
+            self.client.config.location(),
+            self.client.config.project_id(),
+            self.client.config.location(),
+            model.to_string(),
         );
 
         let client = self.client.http_client.clone();
 
+        let token = self.client.config.token().await.unwrap();
+
         let res = match client
             .post(&url)
             .header("content-type", "application/json; charset=utf-8")
-            .header(
-                "Authorization",
-                format!("Bearer {}", self.client.config.api_key),
-            )
+            .header("Authorization", format!("Bearer {}", token))
             .json(&request)
             .send()
             .await
@@ -55,28 +57,39 @@ impl<'c> Chat<'c> {
             }
         };
 
-        let json = res.json::<GeminiChatResponse>().await?;
+        let json = res.json::<serde_json::Value>().await?;
 
-        Ok(json)
+        let response = serde_json::from_value::<GenerateContentResponse>(json)
+            .map_err(|e| {
+                eprintln!("{}", e);
+                e
+            })
+            .unwrap();
+
+        Ok(response)
     }
 
     /// Create a chat stream response
     /// partial message deltas will be sent as stream chunks
-    pub async fn create_stream(
+    pub async fn stream_generate_content(
         &self,
-        request: GeminiChatRequest,
-    ) -> Pin<Box<dyn Stream<Item = Result<GeminiChatResponse, GeminiError>> + Send + 'static>> {
+        model: GeminiModel,
+        request: GenerateContentRequest,
+    ) -> Pin<Box<dyn Stream<Item = Result<GenerateContentResponse, GeminiError>> + Send + 'static>>
+    {
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:streamGenerateContent",
-            self.client.config.location,
-            self.client.config.project_id,
-            self.client.config.location,
-            request.model.to_string(),
+            self.client.config.location(),
+            self.client.config.project_id(),
+            self.client.config.location(),
+            model.to_string(),
         );
 
         let client = self.client.http_client.clone();
 
+        let token = self.client.config.token().await.unwrap();
+
         let (wx, rx) = mpsc::unbounded_channel();
-        let api_key = self.client.config.api_key.clone();
+        let api_key = token;
 
         tokio::spawn(async move {
             let res = match client
@@ -132,7 +145,7 @@ impl<'c> Chat<'c> {
 
                 let content = lines.join("");
 
-                let res = match serde_json::from_str::<GeminiChatResponse>(&content) {
+                let res = match serde_json::from_str::<GenerateContentResponse>(&content) {
                     Ok(c) => c,
                     Err(e) => {
                         if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
