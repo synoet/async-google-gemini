@@ -1,6 +1,6 @@
 use std::pin::Pin;
 
-use crate::{client::Client, error::GeminiError};
+use crate::{client::Client, error::GeminiError, types::content::GenerateContentErrorResponse};
 use futures::{stream::StreamExt, Stream};
 use tokio::sync::mpsc;
 
@@ -121,8 +121,36 @@ impl<'c> Gemini<'c> {
                         return;
                     }
                 };
+
                 let mut lines: Vec<String> =
                     chunk.lines().map(|c| c.to_string()).collect::<Vec<_>>();
+
+                // An error message will be a single chunk with both a start and end token
+                // need to extract the inner json object with error message and try and parse it
+                if lines[0].as_str().starts_with("[")
+                    && lines[lines.len() - 1].as_str().ends_with("]")
+                {
+                    let error_content = lines
+                        .join("")
+                        .trim_matches(|c| c == '[' || c == ']')
+                        .trim()
+                        .to_string();
+
+                    match serde_json::from_str::<GenerateContentErrorResponse>(&error_content) {
+                        Ok(c) => {
+                            if let Err(_) = wx.send(Err(c.into())) {
+                                break;
+                            }
+                            return;
+                        }
+                        Err(e) => {
+                            if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
+                                break;
+                            }
+                            return;
+                        }
+                    };
+                }
 
                 let chunk_type = match lines[0].as_str() {
                     "[{" => {

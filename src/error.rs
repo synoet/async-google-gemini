@@ -1,3 +1,4 @@
+use crate::types::content::GenerateContentErrorResponse;
 #[derive(Debug, thiserror::Error)]
 pub enum ClientError {
     #[error("Missing Environment Variable {0}")]
@@ -26,23 +27,36 @@ pub enum GeminiError {
     ParseError(String),
 }
 
+impl From<usize> for GeminiError {
+    fn from(u: usize) -> Self {
+        match u {
+            400 => Self::InvalidArgument,
+            403 => Self::PermissionDenied,
+            404 => Self::NotFound,
+            429 => Self::ResourceExhausted,
+            499 => Self::Cancelled,
+            500 => Self::Internal,
+            503 => Self::Unavailable,
+            504 => Self::DeadlineExceeded,
+            _ => Self::Internal,
+        }
+    }
+}
+
 impl From<reqwest::Error> for GeminiError {
     fn from(e: reqwest::Error) -> Self {
         let mut error = Self::Internal;
         if let Some(e) = e.status() {
-            error = match e.as_u16() {
-                400 => Self::InvalidArgument,
-                403 => Self::PermissionDenied,
-                404 => Self::NotFound,
-                429 => Self::ResourceExhausted,
-                499 => Self::Cancelled,
-                500 => Self::Internal,
-                503 => Self::Unavailable,
-                504 => Self::DeadlineExceeded,
-                _ => Self::Internal,
-            };
+            error = GeminiError::from(e.as_u16() as usize)
         }
 
         error
+    }
+}
+
+impl From<GenerateContentErrorResponse> for GeminiError {
+    fn from(e: GenerateContentErrorResponse) -> Self {
+        dbg!(&e);
+        GeminiError::from(e.error.code)
     }
 }

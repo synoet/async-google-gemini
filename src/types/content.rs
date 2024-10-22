@@ -668,3 +668,15 @@ pub struct ListCachedContentsResponse {
     #[serde(rename = "nextPageToken", skip_serializing_if = "Option::is_none")]
     pub next_page_token: Option<String>,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct GenericError {
+    pub code: usize,
+    pub message: String,
+    pub status: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+pub struct GenerateContentErrorResponse {
+    pub error: GenericError,
+}
