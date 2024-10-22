@@ -70,7 +70,10 @@ impl GeminiConfig {
 
         let project_id = match account.project_id() {
             Some(project_id) => project_id.to_string(),
-            None => return Err(anyhow!("Service Account does not have a project ID")),
+            None => {
+                tracing::error!("Service Account does not have a project ID");
+                return Err(anyhow!("Service Account does not have a project ID"));
+            }
         };
 
         Ok(Self {

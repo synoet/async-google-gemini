@@ -25,6 +25,8 @@ pub enum GeminiError {
     DeadlineExceeded,
     #[error("Failed to parse response: {0}")]
     ParseError(String),
+    #[error("Failed to generate authentication token {0}")]
+    AuthenticationError(String),
 }
 
 impl From<usize> for GeminiError {

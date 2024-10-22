@@ -27,6 +27,7 @@ impl<'c> Gemini<'c> {
     }
 
     /// Creates a chat response
+    #[tracing::instrument(level = "debug", skip(self))]
     pub async fn generate_content(
         &self,
         model: GeminiModel,
@@ -52,13 +53,16 @@ impl<'c> Gemini<'c> {
             .await
         {
             Ok(res) => res,
-
             Err(e) => {
+                tracing::error!(error=?e, "failed to send request to google vertex");
                 return Err(e.into());
             }
         };
 
-        let json = res.json::<serde_json::Value>().await?;
+        let json = res.json::<serde_json::Value>().await.map_err(|e| {
+            tracing::error!(error=?e, "failed to parse response from google vertex");
+            GeminiError::ParseError(e.to_string())
+        })?;
 
         let response = serde_json::from_value::<GenerateContentResponse>(json)
             .map_err(|e| GeminiError::ParseError(format!("failed to parse response: {}", e)))?;
@@ -68,12 +72,15 @@ impl<'c> Gemini<'c> {
 
     /// Create a chat stream response
     /// partial message deltas will be sent as stream chunks
+    #[tracing::instrument(level = "debug", skip(self))]
     pub async fn stream_generate_content(
         &self,
         model: GeminiModel,
         request: GenerateContentRequest,
-    ) -> Pin<Box<dyn Stream<Item = Result<GenerateContentResponse, GeminiError>> + Send + 'static>>
-    {
+    ) -> Result<
+        Pin<Box<dyn Stream<Item = Result<GenerateContentResponse, GeminiError>> + Send + 'static>>,
+        GeminiError,
+    > {
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:streamGenerateContent",
             self.client.config.location(),
             self.client.config.project_id(),
@@ -83,7 +90,10 @@ impl<'c> Gemini<'c> {
 
         let client = self.client.http_client.clone();
 
-        let token = self.client.config.token().await.unwrap();
+        let token = self.client.config.token().await.map_err(|e| {
+            tracing::error!(error=?e, "failed to get authentication token");
+            GeminiError::AuthenticationError(e.to_string())
+        })?;
 
         let (wx, rx) = mpsc::unbounded_channel();
         let api_key = token;
@@ -100,27 +110,52 @@ impl<'c> Gemini<'c> {
                 Ok(res) => res,
 
                 Err(e) => {
-                    if let Err(_) = wx.send(Err(e.into())) {
+                    tracing::error!(error=?e, "failed to send request to google vertex");
+                    if let Err(send_error) = wx.send(Err(e.into())) {
+                        tracing::error!(error=?send_error, "failed to send error message to stream");
                         return;
                     }
                     return;
                 }
             };
 
+            tracing::debug!("response from google vertex received");
+
             let mut stream = res.bytes_stream();
             let mut pending_chunk: String = String::new();
             while let Some(chunk) = stream.next().await {
-                let mut chunk = match String::from_utf8(chunk.unwrap().to_vec()) {
+                let raw_chunk = match chunk {
                     Ok(c) => c,
                     Err(e) => {
-                        if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
+                        tracing::error!(error=?e, "failed to read chunk from google vertex");
+                        if let Err(send_error) =
+                            wx.send(Err(GeminiError::ParseError(e.to_string())))
+                        {
+                            tracing::error!(error=?send_error, "failed to send error message to stream");
                             break;
                         }
                         return;
                     }
                 };
 
+                let mut chunk = match String::from_utf8(raw_chunk.to_vec()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        tracing::error!(error=?e, "failed to parse chunk while streaming from google vertex");
+                        if let Err(send_error) =
+                            wx.send(Err(GeminiError::ParseError(e.to_string())))
+                        {
+                            tracing::error!(error=?send_error, "failed to send error message to stream");
+                            break;
+                        }
+                        return;
+                    }
+                };
+
+                tracing::debug!("received chunk {}", &chunk);
+
                 if !pending_chunk.is_empty() {
+                    tracing::debug!("appending pending chunk to new chunk");
                     chunk = pending_chunk.clone() + &chunk;
                 }
 
@@ -140,16 +175,24 @@ impl<'c> Gemini<'c> {
 
                     match serde_json::from_str::<GenerateContentErrorResponse>(&error_content) {
                         Ok(c) => {
-                            if let Err(_) = wx.send(Err(c.into())) {
+                            if let Err(send_error) = wx.send(Err(c.into())) {
+                                tracing::error!(
+                                    error=?send_error,
+                                    "failed to send error message to stream"
+                                );
                                 break;
                             }
                             return;
                         }
                         Err(e) => {
-                            if let Err(_) = wx.send(Err(GeminiError::ParseError(format!(
+                            if let Err(send_error) = wx.send(Err(GeminiError::ParseError(format!(
                                 "failed to parse error message: {}",
                                 e
                             )))) {
+                                tracing::error!(
+                                    error=?send_error,
+                                    "failed to send error message to stream"
+                                );
                                 break;
                             }
                             return;
@@ -159,6 +202,7 @@ impl<'c> Gemini<'c> {
 
                 let chunk_type = match lines[0].as_str() {
                     "[{" => {
+                        tracing::debug!("received start token in chunk");
                         let mut new_line = lines.remove(0).to_string();
                         new_line = new_line[1..new_line.len()].to_string();
                         lines.insert(0, new_line);
@@ -166,11 +210,15 @@ impl<'c> Gemini<'c> {
                         ChunkType::Start
                     }
                     "," => {
+                        tracing::debug!("received continue token in chunk");
                         lines.remove(0);
                         pending_chunk = String::new();
                         ChunkType::Comma
                     }
-                    "]" => ChunkType::End,
+                    "]" => {
+                        tracing::debug!("received end token in chunk");
+                        ChunkType::End
+                    }
                     _ => {
                         continue;
                     }
@@ -186,7 +234,8 @@ impl<'c> Gemini<'c> {
                 // If it is, we parse it as json and continue to the next chunk
                 // If it is not, we wait for the next chunk and combine them together
                 if chunk_type == ChunkType::Comma {
-                    if let Err(_) = serde_json::from_str::<Value>(content.as_str()) {
+                    if let Err(parse_error) = serde_json::from_str::<Value>(content.as_str()) {
+                        tracing::debug!(error=?parse_error, "could not parse chunk as json, setting as pending chunk");
                         pending_chunk.push_str(content.as_str());
                         continue;
                     } else {
@@ -197,19 +246,26 @@ impl<'c> Gemini<'c> {
                 let res = match serde_json::from_str::<GenerateContentResponse>(&content) {
                     Ok(c) => c,
                     Err(e) => {
-                        if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
+                        tracing::error!(error=?e, "failed to parse response from google vertex");
+                        if let Err(send_error) =
+                            wx.send(Err(GeminiError::ParseError(e.to_string())))
+                        {
+                            tracing::error!(error=?send_error, "failed to send error message to stream");
                             break;
                         }
                         return;
                     }
                 };
 
-                if let Err(_) = wx.send(Ok(res)) {
+                if let Err(send_error) = wx.send(Ok(res)) {
+                    tracing::error!(error=?send_error, "failed to send response to stream");
                     break;
                 }
             }
         });
 
-        Box::pin(tokio_stream::wrappers::UnboundedReceiverStream::new(rx))
+        Ok(Box::pin(
+            tokio_stream::wrappers::UnboundedReceiverStream::new(rx),
+        ))
     }
 }

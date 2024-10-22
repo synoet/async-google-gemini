@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
     let mut stream = client
         .gemini()
         .stream_generate_content(GeminiModel::Gemini15Flash002, req)
-        .await;
+        .await?;
 
     while let Some(message) = stream.next().await {
         let response = message?;

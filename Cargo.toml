@@ -24,4 +24,5 @@ strum_macros = "0.26.4"
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["full"] }
 tokio-stream = "0.1.16"
+tracing = "0.1.40"
 trust-dns-resolver = { version = "0.23.2", features = ["tokio"] }
