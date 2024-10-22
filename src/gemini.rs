@@ -61,11 +61,7 @@ impl<'c> Gemini<'c> {
         let json = res.json::<serde_json::Value>().await?;
 
         let response = serde_json::from_value::<GenerateContentResponse>(json)
-            .map_err(|e| {
-                eprintln!("{}", e);
-                e
-            })
-            .unwrap();
+            .map_err(|e| GeminiError::ParseError(format!("failed to parse response: {}", e)))?;
 
         Ok(response)
     }
@@ -191,11 +187,9 @@ impl<'c> Gemini<'c> {
                 // If it is not, we wait for the next chunk and combine them together
                 if chunk_type == ChunkType::Comma {
                     if let Err(_) = serde_json::from_str::<Value>(content.as_str()) {
-                        println!("failed to parse chunk, setting as pending");
                         pending_chunk.push_str(content.as_str());
                         continue;
                     } else {
-                        println!("chunk parsed");
                         pending_chunk = String::new();
                     }
                 }
