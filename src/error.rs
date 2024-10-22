@@ -56,7 +56,6 @@ impl From<reqwest::Error> for GeminiError {
 
 impl From<GenerateContentErrorResponse> for GeminiError {
     fn from(e: GenerateContentErrorResponse) -> Self {
-        dbg!(&e);
         GeminiError::from(e.error.code)
     }
 }
