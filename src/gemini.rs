@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use crate::{client::Client, error::GeminiError, types::content::GenerateContentErrorResponse};
 use futures::{stream::StreamExt, Stream};
+use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::types::{
@@ -111,8 +112,9 @@ impl<'c> Gemini<'c> {
             };
 
             let mut stream = res.bytes_stream();
+            let mut pending_chunk: String = String::new();
             while let Some(chunk) = stream.next().await {
-                let chunk = match String::from_utf8(chunk.unwrap().to_vec()) {
+                let mut chunk = match String::from_utf8(chunk.unwrap().to_vec()) {
                     Ok(c) => c,
                     Err(e) => {
                         if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
@@ -121,6 +123,10 @@ impl<'c> Gemini<'c> {
                         return;
                     }
                 };
+
+                if !pending_chunk.is_empty() {
+                    chunk = pending_chunk.clone() + &chunk;
+                }
 
                 let mut lines: Vec<String> =
                     chunk.lines().map(|c| c.to_string()).collect::<Vec<_>>();
@@ -144,7 +150,10 @@ impl<'c> Gemini<'c> {
                             return;
                         }
                         Err(e) => {
-                            if let Err(_) = wx.send(Err(GeminiError::ParseError(e.to_string()))) {
+                            if let Err(_) = wx.send(Err(GeminiError::ParseError(format!(
+                                "failed to parse error message: {}",
+                                e
+                            )))) {
                                 break;
                             }
                             return;
@@ -157,14 +166,18 @@ impl<'c> Gemini<'c> {
                         let mut new_line = lines.remove(0).to_string();
                         new_line = new_line[1..new_line.len()].to_string();
                         lines.insert(0, new_line);
+                        pending_chunk = String::new();
                         ChunkType::Start
                     }
                     "," => {
                         lines.remove(0);
+                        pending_chunk = String::new();
                         ChunkType::Comma
                     }
                     "]" => ChunkType::End,
-                    _ => continue,
+                    _ => {
+                        continue;
+                    }
                 };
 
                 if chunk_type == ChunkType::End {
@@ -172,6 +185,20 @@ impl<'c> Gemini<'c> {
                 }
 
                 let content = lines.join("");
+
+                // If the chunk ends with a comma, we need to check if the chunk is valid json
+                // If it is, we parse it as json and continue to the next chunk
+                // If it is not, we wait for the next chunk and combine them together
+                if chunk_type == ChunkType::Comma {
+                    if let Err(_) = serde_json::from_str::<Value>(content.as_str()) {
+                        println!("failed to parse chunk, setting as pending");
+                        pending_chunk.push_str(content.as_str());
+                        continue;
+                    } else {
+                        println!("chunk parsed");
+                        pending_chunk = String::new();
+                    }
+                }
 
                 let res = match serde_json::from_str::<GenerateContentResponse>(&content) {
                     Ok(c) => c,
