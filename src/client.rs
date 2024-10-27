@@ -1,4 +1,4 @@
-use crate::{config::GeminiConfig, error::ClientError, gemini::Gemini};
+use crate::{claude::Claude, config::GeminiConfig, error::ClientError, gemini::Gemini};
 
 pub struct Client {
     pub http_client: reqwest::Client,
@@ -15,5 +15,9 @@ impl Client {
 
     pub fn gemini(&self) -> Gemini {
         Gemini::new(self)
+    }
+
+    pub fn claude(&self) -> Claude {
+        Claude::new(self)
     }
 }

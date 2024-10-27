@@ -1,5 +1,5 @@
 [package]
-name = "chat"
+name = "claude-stream-raw-predict"
 version = "0.1.0"
 edition = "2021"
 
