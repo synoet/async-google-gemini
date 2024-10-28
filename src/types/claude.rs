@@ -15,11 +15,11 @@ pub enum ClaudeModel {
     #[serde(rename = "claude-3-5-sonnet-v2@20241022")]
     #[strum(serialize = "claude-3-5-sonnet-v2@20241022")]
     Claude35SonnetV2,
-    #[serde(rename = "claude-3-5-turbo-v2@20230725")]
-    #[strum(serialize = "claude-3-5-turbo-v2@20230725")]
+    #[serde(rename = "claude-3-5-sonnet@20230725")]
+    #[strum(serialize = "claude-3-5-sonnet@20230725")]
     Claude35Sonnet,
-    #[serde(rename = "claude-3-5-turbo-v2@20230725")]
-    #[strum(serialize = "claude-3-5-turbo-v2@20230725")]
+    #[serde(rename = "claude-3-opus@20230725")]
+    #[strum(serialize = "claude-3-opus@20230725")]
     Claude3Opus,
     #[serde(rename = "claude-3-haiku@20240307")]
     #[strum(serialize = "claude-3-haiku@20240307")]
@@ -39,7 +39,7 @@ impl WithoutVersion for ClaudeModel {
         match self {
             ClaudeModel::Claude35SonnetV2 => "claude-3.5-sonnet-v2".to_string(),
             ClaudeModel::Claude35Sonnet => "claude-3.5-sonnet".to_string(),
-            ClaudeModel::Claude3Opus => "claude-3.5-opus".to_string(),
+            ClaudeModel::Claude3Opus => "claude-3-opus".to_string(),
             ClaudeModel::Claude3Haiku => "claude-3-haiku".to_string(),
             ClaudeModel::Claude3Sonnet => "claude-3-sonnet".to_string(),
         }
@@ -49,7 +49,7 @@ impl WithoutVersion for ClaudeModel {
         match s.as_str() {
             "claude-3.5-sonnet-v2" => ClaudeModel::Claude35SonnetV2,
             "claude-3.5-sonnet" => ClaudeModel::Claude35Sonnet,
-            "claude-3.5-opus" => ClaudeModel::Claude3Opus,
+            "claude-3-opus" => ClaudeModel::Claude3Opus,
             "claude-3-haiku" => ClaudeModel::Claude3Haiku,
             "claude-3-sonnet" => ClaudeModel::Claude3Sonnet,
             _ => ClaudeModel::Claude35SonnetV2,
