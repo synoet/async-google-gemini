@@ -119,6 +119,7 @@ impl<'c> Claude<'c> {
                 };
 
                 let message = event.data;
+                println!("{:?}", &message);
 
                 let res = match serde_json::from_str::<StreamRawPredictResponse>(&message) {
                     Ok(c) => c,

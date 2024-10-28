@@ -29,13 +29,49 @@ pub enum ClaudeModel {
     Claude3Sonnet,
 }
 
+pub trait WithoutVersion {
+    fn without_version(&self) -> String;
+    fn from_without_version(s: String) -> Self;
+}
+
+impl WithoutVersion for ClaudeModel {
+    fn without_version(&self) -> String {
+        match self {
+            ClaudeModel::Claude35SonnetV2 => "claude-3.5-sonnet-v2".to_string(),
+            ClaudeModel::Claude35Sonnet => "claude-3.5-sonnet".to_string(),
+            ClaudeModel::Claude3Opus => "claude-3.5-opus".to_string(),
+            ClaudeModel::Claude3Haiku => "claude-3-haiku".to_string(),
+            ClaudeModel::Claude3Sonnet => "claude-3-sonnet".to_string(),
+        }
+    }
+
+    fn from_without_version(s: String) -> Self {
+        match s.as_str() {
+            "claude-3.5-sonnet-v2" => ClaudeModel::Claude35SonnetV2,
+            "claude-3.5-sonnet" => ClaudeModel::Claude35Sonnet,
+            "claude-3.5-opus" => ClaudeModel::Claude3Opus,
+            "claude-3-haiku" => ClaudeModel::Claude3Haiku,
+            "claude-3-sonnet" => ClaudeModel::Claude3Sonnet,
+            _ => ClaudeModel::Claude35SonnetV2,
+        }
+    }
+}
+
 const ANTHROPIC_VERSION: &str = "vertex-2023-10-16";
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum ClaudeSystemPrompt {
+    Text(String),
+    Content(Vec<ClaudeContent>),
+}
 
 #[derive(Serialize, Deserialize, Clone, Builder, Debug)]
 pub struct RawPredictRequest {
     #[builder(default = "ANTHROPIC_VERSION.to_string()")]
     pub anthropic_version: String,
     pub max_tokens: u32,
+    pub system: ClaudeSystemPrompt,
     pub stream: bool,
     pub messages: Vec<ClaudeMessage>,
     #[builder(default)]
@@ -95,7 +131,7 @@ pub struct RawPredictResponse {
 pub struct MessageDelta {
     stop_reason: Option<ClaudeStopReason>,
     stop_sequence: Option<String>,
-    usage: ClaudeUsage,
+    usage: Option<ClaudeUsage>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -105,15 +141,21 @@ pub enum StreamRawPredictResponse {
     MessageStart { message: RawPredictResponse },
     #[serde(rename = "content_block_start")]
     ContentBlockStart {
-        index: u32,
+        index: Option<u32>,
         content_block: ClaudeContent,
     },
     #[serde(rename = "content_block_delta")]
-    ContentBlockDelta { index: u32, delta: ClaudeContent },
+    ContentBlockDelta {
+        index: Option<u32>,
+        delta: ClaudeContent,
+    },
     #[serde(rename = "content_block_stop")]
-    ContentBlockStop { index: u32 },
+    ContentBlockStop { index: Option<u32> },
     #[serde(rename = "message_delta")]
-    MessageDelta { index: u32, delta: MessageDelta },
+    MessageDelta {
+        index: Option<u32>,
+        delta: MessageDelta,
+    },
     #[serde(rename = "message_stop")]
     MessageStop,
     #[serde(rename = "ping")]
