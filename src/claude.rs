@@ -2,8 +2,11 @@ use std::pin::Pin;
 
 use crate::{
     client::Client,
-    error::GeminiError,
-    types::claude::{ClaudeModel, RawPredictRequest, RawPredictResponse, StreamRawPredictResponse},
+    error::ClaudeError,
+    types::claude::{
+        ClaudeModel, RawPredictErrorResponse, RawPredictRequest, RawPredictResponse,
+        StreamRawPredictResponse,
+    },
 };
 use futures::{stream::StreamExt, Stream};
 use reqwest_eventsource::{Event, RequestBuilderExt};
@@ -23,7 +26,7 @@ impl<'c> Claude<'c> {
         &self,
         model: ClaudeModel,
         request: RawPredictRequest,
-    ) -> Result<RawPredictResponse, GeminiError> {
+    ) -> Result<RawPredictResponse, ClaudeError> {
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/anthropic/models/{}:streamRawPredict",
             "us-east5".to_string(),
             self.client.config.project_id(),
@@ -45,18 +48,18 @@ impl<'c> Claude<'c> {
         {
             Ok(res) => res,
             Err(e) => {
-                tracing::error!(error=?e, "failed to send request to google vertex");
+                tracing::error!(error=?e, "failed to send request to anthropic");
                 return Err(e.into());
             }
         };
 
         let json = res.json::<serde_json::Value>().await.map_err(|e| {
-            tracing::error!(error=?e, "failed to parse response from google vertex");
-            GeminiError::ParseError(e.to_string())
+            tracing::error!(error=?e, "failed to parse response from anthropic");
+            ClaudeError::ParseError(e.to_string())
         })?;
 
         let response = serde_json::from_value::<RawPredictResponse>(json)
-            .map_err(|e| GeminiError::ParseError(format!("failed to parse response: {}", e)))?;
+            .map_err(|e| ClaudeError::ParseError(format!("failed to parse response: {}", e)))?;
 
         Ok(response)
     }
@@ -67,8 +70,8 @@ impl<'c> Claude<'c> {
         model: ClaudeModel,
         request: RawPredictRequest,
     ) -> Result<
-        Pin<Box<dyn Stream<Item = Result<StreamRawPredictResponse, GeminiError>> + Send + 'static>>,
-        GeminiError,
+        Pin<Box<dyn Stream<Item = Result<StreamRawPredictResponse, ClaudeError>> + Send + 'static>>,
+        ClaudeError,
     > {
         let url = format!("https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/anthropic/models/{}:streamRawPredict?alt=sse",
             "us-east5".to_string(),
@@ -81,7 +84,7 @@ impl<'c> Claude<'c> {
 
         let token = self.client.config.token().await.map_err(|e| {
             tracing::error!(error=?e, "failed to get authentication token");
-            GeminiError::AuthenticationError(e.to_string())
+            ClaudeError::AuthenticationError(e.to_string())
         })?;
 
         let (wx, rx) = mpsc::unbounded_channel();
@@ -98,7 +101,7 @@ impl<'c> Claude<'c> {
                 Ok(res) => res,
 
                 Err(e) => {
-                    tracing::error!(error=?e, "failed to send request to google vertex");
+                    tracing::error!(error=?e, "failed to send request to anthropic");
                     return;
                 }
             };
@@ -113,20 +116,39 @@ impl<'c> Claude<'c> {
                         }
                     },
                     Err(e) => {
-                        tracing::error!(error=?e, "failed to read chunk from google vertex");
+                        tracing::error!(error=?e, "failed to send request to anthropic");
                         return;
                     }
                 };
 
                 let message = event.data;
-                println!("{:?}", &message);
 
                 let res = match serde_json::from_str::<StreamRawPredictResponse>(&message) {
                     Ok(c) => c,
                     Err(parse_error) => {
-                        // TODO: graceful error handling
-                        tracing::error!(error=?parse_error, "failed to parse response from google vertex");
-                        continue;
+                        match serde_json::from_str::<RawPredictErrorResponse>(&message) {
+                            Ok(c) => {
+                                tracing::error!(error=?c, "stream raw predict failed");
+                                if let Err(send_error) = wx.send(Err(c.into())) {
+                                    tracing::error!(
+                                        error=?send_error,
+                                        "failed to send error message to stream"
+                                    );
+                                    break;
+                                }
+                                return;
+                            }
+                            Err(_) => {
+                                tracing::error!(error=?parse_error, "failed to parse response from google vertex");
+                                if let Err(send_error) =
+                                    wx.send(Err(ClaudeError::ParseError(parse_error.to_string())))
+                                {
+                                    tracing::error!(error=?send_error, "failed to send error message to stream");
+                                    break;
+                                }
+                                return;
+                            }
+                        }
                     }
                 };
 

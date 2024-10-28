@@ -167,3 +167,16 @@ impl RawPredictRequest {
         RawPredictRequestBuilder::default()
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ClaudeError {
+    pub e_type: String,
+    pub message: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct RawPredictErrorResponse {
+    #[serde(rename = "error")]
+    pub e_type: String,
+    pub error: ClaudeError,
+}
