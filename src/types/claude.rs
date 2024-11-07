@@ -176,7 +176,7 @@ pub struct ClaudeError {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RawPredictErrorResponse {
-    #[serde(rename = "error")]
+    #[serde(rename = "type")]
     pub e_type: String,
     pub error: ClaudeError,
 }
