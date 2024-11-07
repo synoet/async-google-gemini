@@ -448,7 +448,7 @@ pub struct GenerateContentResponse {
 // GenerateContentCandidate struct
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct GenerateContentCandidate {
-    pub content: Content,
+    pub content: Option<Content>,
     pub index: Option<u32>,
     #[serde(rename = "finishReason", skip_serializing_if = "Option::is_none")]
     pub finish_reason: Option<FinishReason>,
