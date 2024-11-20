@@ -170,6 +170,7 @@ impl RawPredictRequest {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ClaudeError {
+    #[serde(rename = "type")]
     pub e_type: String,
     pub message: String,
 }

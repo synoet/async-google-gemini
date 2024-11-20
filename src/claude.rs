@@ -139,7 +139,7 @@ impl<'c> Claude<'c> {
                                 return;
                             }
                             Err(_) => {
-                                tracing::error!(error=?parse_error, "failed to parse response from google vertex");
+                                tracing::error!(error=?parse_error, "failed to parse error response from claude");
                                 if let Err(send_error) =
                                     wx.send(Err(ClaudeError::ParseError(parse_error.to_string())))
                                 {
