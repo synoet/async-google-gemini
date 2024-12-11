@@ -129,9 +129,9 @@ pub struct RawPredictResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MessageDelta {
-    stop_reason: Option<ClaudeStopReason>,
-    stop_sequence: Option<String>,
-    usage: Option<ClaudeUsage>,
+    pub stop_reason: Option<ClaudeStopReason>,
+    pub stop_sequence: Option<String>,
+    pub usage: Option<ClaudeUsage>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
