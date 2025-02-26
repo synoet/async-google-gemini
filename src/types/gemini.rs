@@ -14,6 +14,14 @@ use strum_macros::IntoStaticStr;
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]
 pub enum GeminiModel {
+    // Gemini 2.0 Flash Lite
+    #[serde(rename = "gemini-2.0-flash-lite-001")]
+    #[strum(serialize = "gemini-2.0-flash-lite-001")]
+    Gemini20FlashLite001,
+    // Gemini 2.0 Flash
+    #[serde(rename = "gemini-2.0-flash-001")]
+    #[strum(serialize = "gemini-2.0-flash-001")]
+    Gemini20Flash001,
     // Gemini 1.5 Flash
     #[serde(rename = "gemini-1.5-flash-001")]
     #[strum(serialize = "gemini-1.5-flash-001")]
@@ -22,10 +30,14 @@ pub enum GeminiModel {
     #[strum(serialize = "gemini-1.5-flash-002")]
     Gemini15Flash002,
 
+    #[serde(rename = "gemini-1.5-pro")]
+    #[strum(serialize = "gemini-1.5-pro")]
+    Gemini15ProLatestStable,
     // Gemini 1.5 Pro
     #[serde(rename = "gemini-1.5-pro-001")]
     #[strum(serialize = "gemini-1.5-pro-001")]
     Gemini15Pro001,
+
     #[serde(rename = "gemini-1.5-pro-002")]
     #[strum(serialize = "gemini-1.5-pro-002")]
     Gemini15Pro002,

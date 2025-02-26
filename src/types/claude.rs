@@ -12,6 +12,9 @@ use strum_macros::IntoStaticStr;
     Debug,
 )]
 pub enum ClaudeModel {
+    #[serde(rename = "claude-3-7-sonnet@20250219")]
+    #[strum(serialize = "claude-3-7-sonnet@20250219")]
+    Claude37Sonnet,
     #[serde(rename = "claude-3-5-sonnet-v2@20241022")]
     #[strum(serialize = "claude-3-5-sonnet-v2@20241022")]
     Claude35SonnetV2,
@@ -42,6 +45,7 @@ impl WithoutVersion for ClaudeModel {
             ClaudeModel::Claude3Opus => "claude-3-opus".to_string(),
             ClaudeModel::Claude3Haiku => "claude-3-haiku".to_string(),
             ClaudeModel::Claude3Sonnet => "claude-3-sonnet".to_string(),
+            ClaudeModel::Claude37Sonnet => "claude-3-7-sonnet".to_string(),
         }
     }
 
